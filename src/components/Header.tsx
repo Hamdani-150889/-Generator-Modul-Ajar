@@ -36,12 +36,19 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
+  const isAdmin = currentTeacher?.role === 'admin';
   const tabs: { id: TabType; label: string; shortLabel: string; icon: React.FC<{ className?: string }>; badge?: string }[] = [
     { id: 'rpp', label: 'RPP / Modul Ajar', shortLabel: 'Modul Ajar', icon: BookOpen },
     { id: 'lkpd', label: 'LKPD Siswa HOTS', shortLabel: 'LKPD', icon: FileText },
     { id: 'asesmen', label: 'Penilaian & Buku Nilai', shortLabel: 'Asesmen & Nilai', icon: CheckSquare },
     { id: 'arsip', label: 'Bank Dokumen', shortLabel: 'Arsip', icon: FolderArchive },
-    { id: 'admin', label: 'Data Kelas & Guru', shortLabel: 'Admin', icon: ShieldCheck, badge: 'Master' },
+    {
+      id: 'admin',
+      label: isAdmin ? 'Panel Admin (Hak Penuh)' : 'Data Master & Admin',
+      shortLabel: 'Admin',
+      icon: ShieldCheck,
+      badge: isAdmin ? 'Super Admin' : 'Master',
+    },
   ];
 
   return (

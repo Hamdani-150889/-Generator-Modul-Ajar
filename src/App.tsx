@@ -26,6 +26,7 @@ import {
   SchoolProfile,
   TeacherUser,
   DataKelas,
+  DataNilaiSiswa,
 } from './types';
 import {
   DEFAULT_SMAN1_LAMPASIO_PROFILE,
@@ -34,6 +35,7 @@ import {
   SAMPLE_ASESMEN_DARING,
   TEACHER_ACCOUNTS_SMAN1_LAMPASIO,
   MASTER_KELAS_SMAN1_LAMPASIO,
+  MASTER_STUDENTS_SMAN1_LAMPASIO,
 } from './data/sampleTemplates';
 import { Header } from './components/Header';
 import { LoginPage } from './components/LoginPage';
@@ -123,6 +125,16 @@ export function App() {
     return saved ? JSON.parse(saved) : [SAMPLE_ASESMEN_DARING];
   });
 
+  // Master Student List State
+  const [studentList, setStudentList] = useState<DataNilaiSiswa[]>(() => {
+    const saved = localStorage.getItem('sman1_lampasio_master_students');
+    return saved ? JSON.parse(saved) : MASTER_STUDENTS_SMAN1_LAMPASIO;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sman1_lampasio_master_students', JSON.stringify(studentList));
+  }, [studentList]);
+
   // Modals State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [refineModalData, setRefineModalData] = useState<{
@@ -137,6 +149,25 @@ export function App() {
     onRefined: () => {},
   });
 
+  // Archive document delete handlers
+  const handleDeleteRpp = (id: string) => {
+    const updated = rppList.filter((r) => r.id !== id);
+    setRppList(updated);
+    localStorage.setItem('sman1_archive_rpp', JSON.stringify(updated));
+  };
+
+  const handleDeleteLkpd = (id: string) => {
+    const updated = lkpdList.filter((l) => l.id !== id);
+    setLkpdList(updated);
+    localStorage.setItem('sman1_archive_lkpd', JSON.stringify(updated));
+  };
+
+  const handleDeleteAsesmen = (id: string) => {
+    const updated = asesmenList.filter((a) => a.id !== id);
+    setAsesmenList(updated);
+    localStorage.setItem('sman1_archive_asesmen', JSON.stringify(updated));
+  };
+
   // Sync Teacher changes into Profile & LocalStorage
   const handleSelectTeacher = (teacher: TeacherUser) => {
     setCurrentTeacher(teacher);
@@ -149,6 +180,11 @@ export function App() {
       nipGuru: teacher.nip,
       mataPelajaranDefault: teacher.mataPelajaran,
     }));
+
+    // Auto-navigate to Admin Panel when logging in as Admin
+    if (teacher.role === 'admin') {
+      setActiveTab('admin');
+    }
   };
 
   const handleRegisterNewTeacher = (newTeacher: TeacherUser) => {
@@ -390,15 +426,23 @@ export function App() {
           />
         )}
 
-        {/* TAB 5: ADMIN PANEL (DATA KELAS & GURU) */}
+        {/* TAB 5: ADMIN PANEL (DATA KELAS, GURU, SISWA, & ARSIP) */}
         {activeTab === 'admin' && (
           <AdminPanel
             classList={classList}
             teacherList={teacherList}
+            studentList={studentList}
             schoolProfile={profile}
             currentTeacher={currentTeacher}
+            rppList={rppList}
+            lkpdList={lkpdList}
+            asesmenList={asesmenList}
             onSaveClassList={(updated) => setClassList(updated)}
             onSaveTeacherList={(updated) => setTeacherList(updated)}
+            onSaveStudentList={(updated) => setStudentList(updated)}
+            onDeleteRpp={handleDeleteRpp}
+            onDeleteLkpd={handleDeleteLkpd}
+            onDeleteAsesmen={handleDeleteAsesmen}
             onSwitchTeacher={handleSelectTeacher}
             onNavigateTab={(tab) => setActiveTab(tab)}
           />

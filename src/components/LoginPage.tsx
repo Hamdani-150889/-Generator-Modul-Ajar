@@ -44,16 +44,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const effectiveTeachers = teacherList || existingTeachers || TEACHER_ACCOUNTS_SMAN1_LAMPASIO;
   const effectiveSchoolName = schoolName || currentProfile?.namaSekolah || 'SMA Negeri 1 Lampasio';
   const handleAdd = onAddNewTeacher || onRegisterTeacher || (() => {});
-  const [loginMode, setLoginMode] = useState<'quick' | 'form' | 'register'>('quick');
+  const [loginMode, setLoginMode] = useState<'quick' | 'form' | 'admin' | 'register'>('quick');
   const [selectedRumpun, setSelectedRumpun] = useState<string>('Semua');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Form State
+  // Form State (Guru)
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Admin Login State
+  const [adminUsername, setAdminUsername] = useState('admin.kurikulum');
+  const [adminPassword, setAdminPassword] = useState('admin123');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
+  const [isAdminSubmitting, setIsAdminSubmitting] = useState(false);
 
   // Register New Teacher State
   const [regNama, setRegNama] = useState('');
@@ -77,8 +84,59 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     return matchRumpun && matchSearch;
   });
 
+  const adminAccount = effectiveTeachers.find(
+    (t) => t.role === 'admin' || t.username === 'admin.kurikulum' || t.username === 'admin'
+  ) || {
+    id: 'admin-1',
+    username: 'admin.kurikulum',
+    password: 'password123',
+    namaLengkap: 'Tim Pengembang Kurikulum SMAN 1 Lampasio',
+    nip: '19820101 200604 1 001',
+    mataPelajaran: 'Administrator Kurikulum Merdeka',
+    rumpunMapel: 'Manajemen & Konseling' as const,
+    faseDefault: 'Fase E & F',
+    email: 'kurikulum@sman1lampasio.sch.id',
+    role: 'admin' as const,
+    avatarBgColor: 'bg-blue-800',
+  };
+
   const handleQuickLogin = (teacher: TeacherUser) => {
     onLoginSuccess(teacher);
+  };
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminError(null);
+    setIsAdminSubmitting(true);
+
+    setTimeout(() => {
+      const u = adminUsername.trim().toLowerCase();
+      const p = adminPassword.trim();
+
+      const isValidUser =
+        u === 'admin' ||
+        u === 'admin.kurikulum' ||
+        u === adminAccount.username.toLowerCase() ||
+        u === adminAccount.email.toLowerCase() ||
+        u === adminAccount.nip.replace(/\s+/g, '');
+
+      const isValidPass =
+        p === 'admin' ||
+        p === 'admin123' ||
+        p === 'password123' ||
+        p === (adminAccount.password || 'password123');
+
+      if (isValidUser && isValidPass) {
+        onLoginSuccess(adminAccount);
+      } else {
+        setAdminError('Username atau kata sandi Admin tidak valid. Gunakan "admin" atau "admin.kurikulum" dengan kata sandi "admin123" atau klik tombol Akses Instan Admin.');
+      }
+      setIsAdminSubmitting(false);
+    }, 350);
+  };
+
+  const handleInstantAdminLogin = () => {
+    onLoginSuccess(adminAccount);
   };
 
   const handleFormLogin = (e: React.FormEvent) => {
@@ -87,12 +145,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setIsSubmitting(true);
 
     setTimeout(() => {
+      const u = usernameInput.trim().toLowerCase();
+      const p = passwordInput.trim();
+
+      // Check admin alias
+      if ((u === 'admin' || u === 'admin.kurikulum') && (p === 'admin123' || p === 'password123' || p === 'admin')) {
+        onLoginSuccess(adminAccount);
+        setIsSubmitting(false);
+        return;
+      }
+
       const found = effectiveTeachers.find(
         (t) =>
-          (t.username.toLowerCase() === usernameInput.trim().toLowerCase() ||
+          (t.username.toLowerCase() === u ||
             t.nip.replace(/\s+/g, '') === usernameInput.trim().replace(/\s+/g, '') ||
-            t.email.toLowerCase() === usernameInput.trim().toLowerCase()) &&
-          (passwordInput === 'password123' || t.password === passwordInput || passwordInput === 'guru123' || !t.password)
+            t.email.toLowerCase() === u) &&
+          (p === 'password123' || p === 'admin123' || t.password === p || p === 'guru123' || !t.password)
       );
 
       if (found) {
@@ -185,14 +253,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </p>
 
           {/* Mode Switcher Tabs */}
-          <div className="mt-6 inline-flex p-1 rounded-xl bg-slate-800/90 border border-slate-700/80 shadow-inner">
+          <div className="mt-6 inline-flex flex-wrap justify-center p-1 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-inner gap-1">
             <button
               id="btn-mode-quick"
               onClick={() => {
                 setLoginMode('quick');
                 setFormError(null);
+                setAdminError(null);
               }}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                 loginMode === 'quick'
                   ? 'bg-blue-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
@@ -203,19 +272,37 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </button>
 
             <button
+              id="btn-mode-admin"
+              onClick={() => {
+                setLoginMode('admin');
+                setFormError(null);
+                setAdminError(null);
+              }}
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                loginMode === 'admin'
+                  ? 'bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-800 text-white shadow-md shadow-blue-500/30 ring-1 ring-blue-400/40'
+                  : 'text-amber-400 hover:text-amber-300 hover:bg-slate-700/50'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
+              <span>Login Admin (Tambah &amp; Hapus Data)</span>
+            </button>
+
+            <button
               id="btn-mode-form"
               onClick={() => {
                 setLoginMode('form');
                 setFormError(null);
+                setAdminError(null);
               }}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                 loginMode === 'form'
                   ? 'bg-blue-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
               }`}
             >
               <KeyRound className="w-4 h-4" />
-              <span>Login Standar (NIP / Akun)</span>
+              <span>Login Standar Guru</span>
             </button>
 
             <button
@@ -223,9 +310,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               onClick={() => {
                 setLoginMode('register');
                 setFormError(null);
+                setAdminError(null);
                 setRegSuccess(false);
               }}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                 loginMode === 'register'
                   ? 'bg-blue-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
@@ -240,6 +328,37 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         {/* MODE 1: QUICK LOGIN BY SUBJECT TEACHER */}
         {loginMode === 'quick' && (
           <div className="space-y-6">
+            {/* Quick Admin Callout Banner */}
+            <div className="bg-gradient-to-r from-blue-950/90 via-slate-800/90 to-indigo-950/90 border border-blue-500/30 rounded-2xl p-4 sm:p-5 backdrop-blur-md shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0">
+                  <ShieldCheck className="w-6 h-6 text-amber-300" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-white">Login Sebagai Administrator Sistem</h3>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 bg-amber-950/80 px-2 py-0.5 rounded-full border border-amber-800/60">
+                      Hak Akses Penuh
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    Memiliki hak akses untuk <strong>menambah</strong> dan <strong>menghapus</strong> data kelas/rombel, data guru, data siswa, serta arsip dokumen.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  id="btn-quick-admin-login"
+                  onClick={() => handleInstantAdminLogin()}
+                  className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <ShieldCheck className="w-4 h-4 text-amber-300" />
+                  <span>Masuk Sebagai Admin</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
             {/* Filter & Search Bar */}
             <div className="bg-slate-800/80 border border-slate-700/70 p-4 rounded-2xl backdrop-blur-md flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
               {/* Rumpun Filter Tabs */}
@@ -365,6 +484,153 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* MODE: DEDICATED ADMIN LOGIN */}
+        {loginMode === 'admin' && (
+          <div className="max-w-lg mx-auto w-full">
+            <div className="bg-slate-800/95 border border-blue-500/40 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl shadow-blue-500/10 relative overflow-hidden">
+              {/* Top Accent Strip */}
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-amber-400"></div>
+
+              <div className="flex items-center gap-3.5 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-700 via-indigo-700 to-blue-900 border border-blue-400/40 flex items-center justify-center text-amber-300 shadow-lg shadow-blue-600/30 shrink-0">
+                  <ShieldCheck className="w-7 h-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-extrabold text-white tracking-tight">Portal Login Administrator</h3>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 bg-amber-950/90 px-2 py-0.5 rounded-full border border-amber-600/50">
+                      Super Admin
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Akses kontrol penuh untuk <strong>menambah</strong> dan <strong>menghapus</strong> seluruh data sistem
+                  </p>
+                </div>
+              </div>
+
+              {/* Privilege Banner */}
+              <div className="mb-6 p-3.5 rounded-2xl bg-blue-950/70 border border-blue-700/50 text-xs text-slate-300 space-y-1.5">
+                <div className="flex items-center gap-2 font-bold text-blue-300">
+                  <Layers className="w-4 h-4 text-blue-400" />
+                  <span>Wewenang &amp; Hak Kelola Administrator:</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 text-[11px] text-slate-300">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span>Tambah &amp; Hapus Data Rombel / Kelas</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span>Tambah &amp; Hapus Data Guru &amp; Tendik</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span>Tambah &amp; Hapus Data Master Siswa</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span>Hapus &amp; Kelola Arsip RPP / LKPD</span>
+                  </div>
+                </div>
+              </div>
+
+              {adminError && (
+                <div className="mb-5 p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <span>{adminError}</span>
+                </div>
+              )}
+
+              {/* Fast 1-Click Login Button */}
+              <div className="mb-5">
+                <button
+                  type="button"
+                  id="btn-fast-admin-login"
+                  onClick={handleInstantAdminLogin}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 hover:from-amber-400 hover:to-amber-600 text-slate-950 text-xs font-black rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-slate-950" />
+                  <span>⚡ Masuk Cepat Administrator (1-Klik Tanpa Ketik)</span>
+                </button>
+              </div>
+
+              <div className="relative flex items-center justify-center mb-5">
+                <div className="border-t border-slate-700 w-full"></div>
+                <span className="bg-slate-800 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  atau gunakan formulir login
+                </span>
+                <div className="border-t border-slate-700 w-full"></div>
+              </div>
+
+              <form onSubmit={handleAdminLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Username Administrator
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="admin atau admin.kurikulum"
+                      value={adminUsername}
+                      onChange={(e) => setAdminUsername(e.target.value)}
+                      className="w-full text-xs bg-slate-900/90 border border-slate-700 text-white placeholder-slate-500 rounded-xl pl-9 pr-3 py-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Gunakan username: <code className="text-amber-300">admin</code> atau <code className="text-amber-300">admin.kurikulum</code>
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Kata Sandi Administrator
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type={showAdminPassword ? 'text' : 'password'}
+                      required
+                      placeholder="Masukkan kata sandi admin"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      className="w-full text-xs bg-slate-900/90 border border-slate-700 text-white placeholder-slate-500 rounded-xl pl-9 pr-12 py-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPassword(!showAdminPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-200 cursor-pointer"
+                    >
+                      {showAdminPassword ? 'Sembunyi' : 'Lihat'}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Kata sandi default: <code className="text-amber-300">admin123</code> atau <code className="text-amber-300">password123</code>
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isAdminSubmitting}
+                    className="w-full py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isAdminSubmitting ? (
+                      <span>Memverifikasi Akun Admin...</span>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4 text-amber-300" />
+                        <span>Masuk Sebagai Administrator (Hak Tambah &amp; Hapus Data)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 
