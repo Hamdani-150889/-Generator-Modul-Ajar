@@ -1,0 +1,8 @@
+{
+  "name": "Generator RPP & LKPD AI - SMA Negeri 1 Lampasio",
+  "description": "Aplikasi AI Pembuat RPP/Modul Ajar dan LKPD Otomatis terintegrasi Kurikulum Merdeka, Sistem Penilaian Daring, dan Ekspor Word/PDF untuk Guru SMA Negeri 1 Lampasio.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
